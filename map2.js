@@ -1,0 +1,27 @@
+
+const map2 = [
+	'                                                              ',
+	'                                                              ',
+	'                                                              ',
+	'                     gggggggggg                               ',
+	'                      ddddddd                                 ',
+	'                                                              ',
+	'                                                              ',
+	'                                               Hggggg         ',
+	'       F  cc         gg                        H ddd          ',
+	'     Hgggggggg                                 H        S  P  ',
+	'     H ddddddd                                 H        gg gH ',
+	'     H                                         H      dddd dH ',
+	'     H                                         H            H ',
+	'  c  H                                         H      ccccc H ',
+	'ggg  H                  9                      H      gggggggg',
+	'ddd  Hl      f    ccggggg              ggggggccFcccgggdddddddd',
+	'dddddHddddddddggggggdddddggggggg         ddddggggggddddddddddd',
+	'dddddHdddddddddddddddddddddddddd           ddddddddddddddddddd',
+	'dddddHddddddddddddddddddddddddd              ddddddddddddddddd',
+	'dddddHdddddddddddddddddddddddd                 ddddddddddddddd',
+	'dddddHdddddddddddddddddddddd                    dddddddddddddd',
+	'dddddHddddddd                                   dddddddddddddd',
+	'dddddHccccccccccccccccccc                         dddddddddddd',
+	'dddddddddddddddddddddddddddddddd                  ddddddddddd'
+]

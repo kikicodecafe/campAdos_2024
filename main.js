@@ -9,6 +9,8 @@ function preload() {
     slimeSheet = loadImage('assets/sprites/slime_purple.png');
 	fruitSheet = loadImage('assets/sprites/fruit.png');
     coinSheet = loadImage('assets/sprites/coin.png');
+    // swordSheet = loadImage('assets/sprites/excalibur_.png');
+
 }
 
 function setup() {
@@ -61,6 +63,7 @@ function setup() {
 
         middleBridge =  new bridge.Group();
         middleBridge.addAni({ w: 16, h: 16, row: 0, col: 10 });
+        middleBridge.bounciness = 1.10;
         middleBridge.tile = '_'
         
         rightBridge =  new bridge.Group();
@@ -146,10 +149,47 @@ function setup() {
     player.score = 0;
     player.lives = 3;
     player.isDead = false;
+    player.gameOverPassedOnce = false;
+
+    ennemy = new Group();
+    
+    slimePurple = new ennemy.Group();
+    slimePurple.spriteSheet = slimeSheet;
+    //slimePurple.rotationLock = true;
+    slimePurple.anis.offset.y = -4;
+    slimePurple.addAnis({
+        spawn: { w: 24, h: 24, row: 0, frames: 4, frameDelay: 20},
+        stands: { w: 24, h: 24, row: 1, frames: 4, frameDelay: 6},
+        hurt: { w: 24, h: 24, row:2, frames: 4, frameDelay: 9}
+    });
+    slimePurple.health = 5;
+    //slimePurple.debug = true;
+    slimePurple.moveTowards(player.x, undefined, 0.01);
+    for (let i = 0; i < 5; ++i) {
+        delay(5000 + i * 10000).then(async () => {
+            let sprite;
+            do {
+                sprite = findRandomBlockToSpawnOnto(grass);
+            } while(!sprite);
+            let slime = new slimePurple.Sprite(sprite.x, sprite.y - 16, 16, 16);
+            slime.rotationLock = true;
+            await slime.changeAni(['spawn', 'stands']);
+            
+        })
+    }
+    // Player take damage if touching enemy
+    player.collides(slimePurple, purpleSlimeAttack);
 }
 
-function draw() {
+async function draw() {
     background('skyblue')
+    
+    // different draw call for death screen
+	if (player.dead) {
+		gameOver();
+		return;
+	}
+
     camera.x = player.x;
     camera.y = player.y;
 
@@ -162,9 +202,9 @@ function draw() {
         player.vel.x = -PLAYER_SPEED;
         player.changeAni('run');
     } else {
-        if (player.anis.name !== 'roll' || 
-            player.anis.name !== 'hurt' || 
-            player.anis.name !== 'dead') {
+        if (player.ani.name !== 'roll' && 
+            player.ani.name !== 'hurt' && 
+            player.ani.name !== 'dead') {
                 player.changeAni('stand');
             }
     }
@@ -178,11 +218,129 @@ function draw() {
         player.vel.y = PLAYER_SPEED_JUMP;
     }
 
+    for (let slime of slimePurple) {
+        if (slime.ani.name === 'spawn') continue;
+        let distance = dist(player.x, 0, slime.x, 0);
+        if (distance >= 40) slime.moveTowards(player.x, undefined, 0.005);
+        else slime.moveTowards(player.x, undefined, 0.01);
+        if (player.x < slime.x) {
+            slime.mirror.x = true
+        } else {
+            slime.mirror.x = false
+        }
+    }
+    // Player roll mechanic
+	if (kb.pressed('down')) {
 
+		// Apply vel in current direction
+		if (player.mirror.x == true) {
+			player.vel.x = -5;
+		} else {
+			player.vel.x = 5;
+		}
+
+		await player.changeAni('roll');
+		player.changeAni('stand');
+	}
+
+	// Player Ladder climb mechanic
+	if (player.overlapping(ladder) && kb.pressing('up')) {
+		player.move(1, 'up', 1);
+	}
+
+	// Player Shoot projectiles
+	if (kb.pressed('e')) {
+		let proj = new Sprite();
+
+		proj.d = 3;
+		proj.color = color(255, 78, 0);
+
+		//					Offset to avoid colliding with player's hitbox
+		proj.x = player.x + (player.mirror.x ? -10 : 10);
+		proj.y = player.y;
+
+		proj.vel.x = player.mirror.x ? -12 : 12;
+
+		// remove proj if touches tiles (the map)
+		proj.collides(tiles, async () => {
+			await delay(1000);
+			proj.remove()
+		});
+
+		// Enemy take damage
+		proj.collides(slimePurple, async (proj, slime) => {
+			slime.moveAway(player, 0.6);
+			await slime.changeAni('hurt');
+			slime.remove();
+		});
+	}
+
+	// Player dies if falls beneath world
+	if (player.y > 2000) {
+		player.dead = true;
+	}
+
+    for (let coin of coins) {
+        if (player.overlaps(coin)) {
+            coin.remove();
+            player.score++;
+        }
+    }
+    if (player.overlaps(portal)) {
+        tiles.remove();
+        // on change la position du joueur
+        tiles = new Tiles(map2, 0, 0, 16, 16);
+    }
     // HUD
 	textFont(font);
 	textSize(8);
 
+    // Sign HUD tooltip 1
+	if (player.overlapping(sign)) {
+		push()
+		textAlign(CENTER);
+		text(sign.message, canvas.hw, canvas.hh - 16);
+		pop()
+	}
+
+	// Sign HUD tooltip 2
+	if (player.overlapping(sign2)) {
+		push()
+		textAlign(CENTER)
+		text(sign2.message, canvas.hw + 32, canvas.hh - 16);
+		pop()
+	}
+
     text('Score: ' + player.score, 10, 10);
 	text('Vies: ' + player.lives, 10, 20);
+}
+
+function gameOver() {
+
+	// Black screen
+	background(33);
+
+	// Remove sprites
+	ennemy.remove();
+	tiles.remove();
+
+	// Reset values
+	player.score = 0;
+	player.lives = 0;
+	player.vel.x = 0;
+	player.vel.y = 0;
+	player.x = canvas.hw - 16;
+	player.y = canvas.hh - 6;
+	camera.x = canvas.hw;
+	camera.y = canvas.hh;
+	world.gravity.y = 0;
+
+	// Render HUD
+	fill(255)
+	text('GAME OVER', canvas.hw, canvas.hh);
+	if (player.gameOverPassedOnce) return;
+	player.gameOverPassedOnce = true;
+
+	// here we staydead when the promise has been resolved
+	player.changeAni(['dead', 'death']);
 }
